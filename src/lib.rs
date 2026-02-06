@@ -16,6 +16,9 @@ mod local_spawner;
 mod prompt_args;
 mod thread;
 
+// Re-export CodexAgent for direct usage
+pub use codex_agent::CodexAgent;
+
 pub static ACP_CLIENT: OnceLock<Arc<AgentSideConnection>> = OnceLock::new();
 
 /// Run the Codex ACP agent.

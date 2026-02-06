@@ -21,13 +21,13 @@ agent-client-protocol = { version = "=0.9.4", features = ["unstable"] }
 anyhow = "1"
 async-trait = "0.1"
 clap = "4"
-codex-apply-patch = { git = "https://github.com/zed-industries/codex", branch = "acp" }
-codex-arg0 = { git = "https://github.com/zed-industries/codex", branch = "acp" }
-codex-common = { git = "https://github.com/zed-industries/codex", branch = "acp", features = ["cli"] }
-codex-core = { git = "https://github.com/zed-industries/codex", branch = "acp" }
-codex-mcp-server = { git = "https://github.com/zed-industries/codex", branch = "acp" }
-codex-protocol = { git = "https://github.com/zed-industries/codex", branch = "acp" }
-codex-login = { git = "https://github.com/zed-industries/codex", branch = "acp" }
+codex-apply-patch = { git = "https://github.com/sxhxliang/codex", branch = "acp-gpui" }
+codex-arg0 = { git = "https://github.com/sxhxliang/codex", branch = "acp-gpui" }
+codex-common = { git = "https://github.com/sxhxliang/codex", branch = "acp-gpui", features = ["cli"] }
+codex-core = { git = "https://github.com/sxhxliang/codex", branch = "acp-gpui" }
+codex-mcp-server = { git = "https://github.com/sxhxliang/codex", branch = "acp-gpui" }
+codex-protocol = { git = "https://github.com/sxhxliang/codex", branch = "acp-gpui" }
+codex-login = { git = "https://github.com/sxhxliang/codex", branch = "acp-gpui" }
 itertools = "0.14.0"
 regex-lite = "0.1"
 serde = { version = "1", features = ["derive"] }
@@ -42,7 +42,7 @@ unicode-segmentation = "1.11.0"
 uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]
-codex-core = { git = "https://github.com/zed-industries/codex", branch = "acp", features = ["test-support"] }
+codex-core = { git = "https://github.com/sxhxliang/codex", branch = "acp-gpui", features = ["test-support"] }
 
 [lints.rust]
 let-underscore = "warn"

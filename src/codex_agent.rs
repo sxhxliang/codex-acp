@@ -30,10 +30,7 @@ use std::{
 use tracing::{debug, info};
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{
-    local_spawner::{AcpFs, LocalSpawner},
-    thread::Thread,
-};
+use crate::thread::Thread;
 
 /// The Codex implementation of the ACP Agent trait.
 ///
@@ -50,8 +47,6 @@ pub struct CodexAgent {
     thread_manager: ThreadManager,
     /// Active sessions mapped by `SessionId`
     sessions: Rc<RefCell<HashMap<SessionId, Rc<Thread>>>>,
-    /// Session working directories for filesystem sandboxing
-    session_roots: Arc<Mutex<HashMap<SessionId, PathBuf>>>,
 }
 
 const SESSION_LIST_PAGE_SIZE: usize = 25;
@@ -68,22 +63,10 @@ impl CodexAgent {
 
         let client_capabilities: Arc<Mutex<ClientCapabilities>> = Arc::default();
 
-        let local_spawner = LocalSpawner::new();
-        let capabilities_clone = client_capabilities.clone();
-        let session_roots: Arc<Mutex<HashMap<SessionId, PathBuf>>> = Arc::default();
-        let session_roots_clone = session_roots.clone();
-        let thread_manager = ThreadManager::new_with_fs(
+        let thread_manager = ThreadManager::new(
             config.codex_home.clone(),
             auth_manager.clone(),
             SessionSource::Unknown,
-            Box::new(move |thread_id| {
-                Arc::new(AcpFs::new(
-                    Self::session_id_from_thread_id(thread_id),
-                    capabilities_clone.clone(),
-                    local_spawner.clone(),
-                    session_roots_clone.clone(),
-                ))
-            }),
         );
         Self {
             auth_manager,
@@ -91,7 +74,6 @@ impl CodexAgent {
             config,
             thread_manager,
             sessions: Rc::default(),
-            session_roots,
         }
     }
 
@@ -149,6 +131,7 @@ impl CodexAgent {
                                 env_http_headers: None,
                             },
                             enabled: true,
+                            required: false,
                             startup_timeout_sec: None,
                             tool_timeout_sec: None,
                             disabled_tools: None,
@@ -180,6 +163,7 @@ impl CodexAgent {
                                 cwd: Some(cwd.clone()),
                             },
                             enabled: true,
+                            required: false,
                             startup_timeout_sec: None,
                             tool_timeout_sec: None,
                             disabled_tools: None,
@@ -330,11 +314,6 @@ impl Agent for CodexAgent {
             .map_err(|_e| Error::internal_error())?;
 
         let session_id = Self::session_id_from_thread_id(thread_id);
-        // Record the session root for filesystem sandboxing.
-        self.session_roots
-            .lock()
-            .unwrap()
-            .insert(session_id.clone(), config.cwd.clone());
         let thread = Rc::new(Thread::new(
             session_id.clone(),
             thread,
@@ -415,10 +394,6 @@ impl Agent for CodexAgent {
 
         let load = thread.load().await?;
 
-        self.session_roots
-            .lock()
-            .unwrap()
-            .insert(session_id.clone(), config.cwd);
         self.sessions.borrow_mut().insert(session_id, thread);
 
         Ok(LoadSessionResponse::new()
@@ -437,7 +412,7 @@ impl Agent for CodexAgent {
         let cursor_obj = cursor.as_deref().and_then(parse_cursor);
 
         let page = RolloutRecorder::list_threads(
-            &self.config.codex_home,
+            &self.config,
             SESSION_LIST_PAGE_SIZE,
             cursor_obj.as_ref(),
             ThreadSortKey::UpdatedAt,

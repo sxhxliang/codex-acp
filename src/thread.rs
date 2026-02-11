@@ -430,6 +430,7 @@ impl PromptState {
             EventMsg::TurnStarted(TurnStartedEvent {
                 model_context_window,
                 collaboration_mode_kind,
+                ..
             }) => {
                 info!("Task started with context window of {model_context_window:?} {collaboration_mode_kind:?}");
             }
@@ -617,7 +618,9 @@ impl PromptState {
             }) => {
                 info!("Item completed: thread_id={}, turn_id={}, item={:?}", thread_id, turn_id, item);
             }
-            EventMsg::TurnComplete(TurnCompleteEvent { last_agent_message }) => {
+            EventMsg::TurnComplete(TurnCompleteEvent {
+                last_agent_message, ..
+            }) => {
                 info!(
                     "Task completed successfully after {} events. Last agent message: {last_agent_message:?}",
                     self.event_count
@@ -665,7 +668,7 @@ impl PromptState {
                         .ok();
                 }
             }
-            EventMsg::TurnAborted(TurnAbortedEvent { reason }) => {
+            EventMsg::TurnAborted(TurnAbortedEvent { reason, .. }) => {
                 info!("Turn aborted: {reason:?}");
                 if let Some(response_tx) = self.response_tx.take() {
                     response_tx.send(Ok(StopReason::Cancelled)).ok();
@@ -752,6 +755,8 @@ impl PromptState {
             | EventMsg::CollabWaitingEnd(..)
             | EventMsg::CollabCloseBegin(..)
             | EventMsg::CollabCloseEnd(..)
+            | EventMsg::CollabResumeBegin(..)
+            | EventMsg::CollabResumeEnd(..)
             | EventMsg::PlanDelta(..) => {}
             e @ (EventMsg::McpListToolsResponse(..)
             // returned from Op::ListCustomPrompts, ignore
@@ -1062,7 +1067,7 @@ impl PromptState {
         let ExecApprovalRequestEvent {
             call_id,
             command: _,
-            turn_id: _,
+            turn_id,
             cwd,
             reason,
             parsed_cmd,
@@ -1150,6 +1155,7 @@ impl PromptState {
         self.thread
             .submit(Op::ExecApproval {
                 id: self.submission_id.clone(),
+                turn_id: (!turn_id.is_empty()).then_some(turn_id),
                 decision,
             })
             .await
@@ -2797,11 +2803,9 @@ fn extract_tool_call_content_from_changes(
                     Diff::new(path, String::new()).old_text(content)
                 }
                 codex_core::protocol::FileChange::Update {
-                    unified_diff: _,
+                    unified_diff,
                     move_path,
-                    old_content,
-                    new_content,
-                } => Diff::new(move_path.unwrap_or(path), new_content).old_text(old_content),
+                } => Diff::new(move_path.unwrap_or(path), unified_diff),
             })
         }),
     )
